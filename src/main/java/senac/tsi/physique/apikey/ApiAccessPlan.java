@@ -1,7 +1,7 @@
 package senac.tsi.physique.apikey;
 
 public enum ApiAccessPlan {
-    ALUNO(1, 60),
+    ALUNO(1, 3),
     PROFESSOR(2, 300),
     ADMIN(3, 1000);
 

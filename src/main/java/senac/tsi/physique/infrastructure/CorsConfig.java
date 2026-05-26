@@ -21,7 +21,9 @@ public class CorsConfig implements WebMvcConfigurer {
             "http://localhost:4200",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:5173",
-            "http://127.0.0.1:4200"
+            "http://127.0.0.1:4200",
+            "https://yukioarthur.github.io",
+            "https://physiquewebservice.onrender.com"
     );
 
     private static final List<String> ALLOWED_METHODS = List.of(
