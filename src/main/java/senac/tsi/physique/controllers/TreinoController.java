@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import senac.tsi.physique.apikey.ApiAccessPlan;
 import senac.tsi.physique.apikey.RequireApiKey;
 import senac.tsi.physique.dto.TreinoRequest;
-import senac.tsi.physique.dto.versioning.TreinoV1Response;
 import senac.tsi.physique.dto.versioning.TreinoV2Response;
 import senac.tsi.physique.versioning.ApiVersionConstants;
 import senac.tsi.physique.entities.Exercicio;
@@ -73,54 +72,39 @@ public class TreinoController {
     }
 
     @Operation(
-            summary = "Buscar treino por ID - versão padrão/V1",
-            description = "Mantém compatibilidade com clientes existentes. Quando X-API-Version estiver ausente, a API responde como versão 1."
+            summary = "Buscar treino por ID com versionamento por header",
+            description = """
+                    Retorna um treino pelo ID usando versionamento via header X-API-Version.
+                    Se o header estiver ausente, a API mantém compatibilidade e retorna a versão 1.
+                    Valores suportados:
+                    - X-API-Version: 1 ou ausente = resposta V1 compatível com HATEOAS.
+                    - X-API-Version: 2 = resposta V2 com apiVersion, quantidadeExercicios, exercícios resumidos e links simples.
+                    """
     )
-    @Parameter(name = ApiVersionConstants.HEADER_NAME, in = ParameterIn.HEADER, required = false, description = "Versão da API. Ausente = V1", example = "1")
+    @Parameter(name = ApiVersionConstants.HEADER_NAME, in = ParameterIn.HEADER, required = false, description = "Versão da API. Valores suportados: 1, 2. Ausente = V1.", example = "2")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Treino encontrado na representação V1 compatível"),
+            @ApiResponse(responseCode = "200", description = "Treino encontrado"),
             @ApiResponse(responseCode = "400", description = "Versão de API não suportada ou ID inválido"),
             @ApiResponse(responseCode = "404", description = "Treino não encontrado")
     })
-    @GetMapping(value = "/treinos/{id}", headers = "!X-API-Version")
-    public EntityModel<Treino> getTreinoById(
-            @Parameter(description = "ID do treino", example = "1") @PathVariable @Positive(message = "O ID deve ser maior que zero") Long id) {
-        var treino = buscarTreino(id);
-        return toModel(treino);
-    }
+    @GetMapping("/treinos/{id}")
+    public ResponseEntity<?> getTreinoById(
+            @Parameter(description = "ID do treino", example = "1")
+            @PathVariable @Positive(message = "O ID deve ser maior que zero") Long id,
+            @RequestHeader(name = ApiVersionConstants.HEADER_NAME, required = false) String apiVersion) {
 
-    @Operation(
-            summary = "Buscar treino por ID - V1",
-            description = "Versão 1 do endpoint por header X-API-Version=1. Mantém o formato compatível com a resposta original."
-    )
-    @Parameter(name = ApiVersionConstants.HEADER_NAME, in = ParameterIn.HEADER, required = true, description = "Versão da API", example = "1")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Treino encontrado na representação V1"),
-            @ApiResponse(responseCode = "400", description = "Versão de API não suportada ou ID inválido"),
-            @ApiResponse(responseCode = "404", description = "Treino não encontrado")
-    })
-    @GetMapping(value = "/treinos/{id}", headers = "X-API-Version=1")
-    public EntityModel<Treino> getTreinoByIdV1(
-            @Parameter(description = "ID do treino", example = "1") @PathVariable @Positive(message = "O ID deve ser maior que zero") Long id) {
         var treino = buscarTreino(id);
-        return toModel(treino);
-    }
+        String version = (apiVersion == null || apiVersion.isBlank()) ? ApiVersionConstants.V1 : apiVersion.trim();
 
-    @Operation(
-            summary = "Buscar treino por ID - V2",
-            description = "Versão 2 do endpoint por header X-API-Version=2. Inclui apiVersion, quantidade de exercícios, resumo dos exercícios e links simples."
-    )
-    @Parameter(name = ApiVersionConstants.HEADER_NAME, in = ParameterIn.HEADER, required = true, description = "Versão da API", example = "2")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Treino encontrado na representação V2"),
-            @ApiResponse(responseCode = "400", description = "Versão de API não suportada ou ID inválido"),
-            @ApiResponse(responseCode = "404", description = "Treino não encontrado")
-    })
-    @GetMapping(value = "/treinos/{id}", headers = "X-API-Version=2")
-    public TreinoV2Response getTreinoByIdV2(
-            @Parameter(description = "ID do treino", example = "1") @PathVariable @Positive(message = "O ID deve ser maior que zero") Long id) {
-        var treino = buscarTreino(id);
-        return TreinoV2Response.from(treino);
+        if (ApiVersionConstants.V1.equals(version)) {
+            return ResponseEntity.ok(toModel(treino));
+        }
+
+        if (ApiVersionConstants.V2.equals(version)) {
+            return ResponseEntity.ok(TreinoV2Response.from(treino));
+        }
+
+        throw new IllegalArgumentException("Unsupported API version. Supported versions are: 1, 2");
     }
 
     @Operation(summary = "Criar treino", description = "Cria um treino usando uma lista de `exercicioIds` já cadastrados.")
@@ -205,7 +189,7 @@ public class TreinoController {
 
     private EntityModel<Treino> toModel(Treino treino) {
         return EntityModel.of(treino,
-                linkTo(methodOn(TreinoController.class).getTreinoById(treino.getId())).withSelfRel(),
+                linkTo(TreinoController.class).slash("treinos").slash(treino.getId()).withSelfRel(),
                 linkTo(methodOn(TreinoController.class).getTreinos(null, Pageable.unpaged())).withRel("treinos"));
     }
 }

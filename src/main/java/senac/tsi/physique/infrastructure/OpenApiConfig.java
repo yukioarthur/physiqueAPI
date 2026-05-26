@@ -129,7 +129,7 @@ public class OpenApiConfig {
 
             if (requireApiKey != null) {
                 operation.addSecurityItem(new SecurityRequirement().addList("ApiKeyAuth"));
-                operation.addParametersItem(new Parameter()
+                addHeaderParameterIfAbsent(operation, new Parameter()
                         .name("X-API-Key")
                         .in("header")
                         .required(true)
@@ -149,7 +149,7 @@ public class OpenApiConfig {
 
             RequireIdempotency requireIdempotency = handlerMethod.getMethodAnnotation(RequireIdempotency.class);
             if (requireIdempotency != null) {
-                operation.addParametersItem(new Parameter()
+                addHeaderParameterIfAbsent(operation, new Parameter()
                         .name("Idempotency-Key")
                         .in("header")
                         .required(true)
@@ -162,7 +162,7 @@ public class OpenApiConfig {
             boolean versionedTreinoEndpoint = handlerMethod.getBeanType().getSimpleName().equals("TreinoController")
                     && handlerMethod.getMethod().getName().startsWith("getTreinoById");
             if (versionedTreinoEndpoint) {
-                operation.addParametersItem(new Parameter()
+                addHeaderParameterIfAbsent(operation, new Parameter()
                         .name(ApiVersionConstants.HEADER_NAME)
                         .in("header")
                         .required(false)
@@ -174,4 +174,13 @@ public class OpenApiConfig {
             return operation;
         };
     }
+
+    private void addHeaderParameterIfAbsent(Operation operation, Parameter parameter) {
+        if (operation.getParameters() == null || operation.getParameters().stream()
+                .noneMatch(existing -> parameter.getName().equals(existing.getName())
+                        && parameter.getIn().equals(existing.getIn()))) {
+            operation.addParametersItem(parameter);
+        }
+    }
+
 }
