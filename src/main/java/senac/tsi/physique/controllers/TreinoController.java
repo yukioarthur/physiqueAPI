@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import senac.tsi.physique.apikey.ApiAccessPlan;
 import senac.tsi.physique.apikey.RequireApiKey;
 import senac.tsi.physique.dto.TreinoRequest;
+import senac.tsi.physique.dto.versioning.TreinoV1Response;
 import senac.tsi.physique.dto.versioning.TreinoV2Response;
 import senac.tsi.physique.versioning.ApiVersionConstants;
 import senac.tsi.physique.entities.Exercicio;
@@ -97,7 +98,7 @@ public class TreinoController {
         String version = (apiVersion == null || apiVersion.isBlank()) ? ApiVersionConstants.V1 : apiVersion.trim();
 
         if (ApiVersionConstants.V1.equals(version)) {
-            return ResponseEntity.ok(toModel(treino));
+            return ResponseEntity.ok(TreinoV1Response.from(treino));
         }
 
         if (ApiVersionConstants.V2.equals(version)) {
@@ -163,7 +164,7 @@ public class TreinoController {
     }
 
     private Treino buscarTreino(Long id) {
-        return treinoRepository.findById(id)
+        return treinoRepository.findByIdComDetalhes(id)
                 .orElseThrow(() -> new TreinoNotFoundException(id));
     }
 
