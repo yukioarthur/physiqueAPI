@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import senac.tsi.physique.apikey.ApiAccessPlan;
@@ -14,6 +15,8 @@ import senac.tsi.physique.apikey.RequireApiKey;
 import senac.tsi.physique.dto.*;
 import senac.tsi.physique.entities.ResultadoTreino;
 import senac.tsi.physique.entities.SerieExecutada;
+import senac.tsi.physique.entities.Treino;
+import senac.tsi.physique.entities.UsuarioTreino;
 import senac.tsi.physique.exceptions.ExercicioNotFoundException;
 import senac.tsi.physique.idempotency.RequireIdempotency;
 import senac.tsi.physique.exceptions.TreinoNotFoundException;
@@ -59,6 +62,7 @@ public class TreinoAppController {
     @Operation(summary = "Buscar treino atual do usuário")
     @RequireApiKey(minPlan = ApiAccessPlan.ALUNO)
     @GetMapping("/usuarios/{usuarioId}/treino-atual")
+    @Transactional(readOnly = true)
     public TreinoAtualResponse getTreinoAtual(@PathVariable @Positive(message = "O ID do usuário deve ser maior que zero") Long usuarioId) {
         usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new UsuarioNotFoundException(usuarioId));
@@ -66,15 +70,48 @@ public class TreinoAppController {
         var usuarioTreino = usuarioTreinoRepository.findByUsuarioIdAndAtivoTrue(usuarioId)
                 .orElseThrow(() -> new TreinoNotFoundException(usuarioId));
 
-        var treino = usuarioTreino.getTreino();
+        return montarTreinoAtualResponse(usuarioTreino.getTreino());
+    }
+
+    @Operation(summary = "Iniciar treino do usuário", description = "Marca um treino como ativo para o usuário e desativa qualquer treino ativo anterior")
+    @RequireApiKey(minPlan = ApiAccessPlan.ALUNO)
+    @PostMapping("/usuarios/{usuarioId}/treinos/{treinoId}/iniciar")
+    @Transactional
+    public TreinoAtualResponse iniciarTreino(
+            @PathVariable @Positive(message = "O ID do usuário deve ser maior que zero") Long usuarioId,
+            @PathVariable @Positive(message = "O ID do treino deve ser maior que zero") Long treinoId
+    ) {
+        var usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new UsuarioNotFoundException(usuarioId));
+        var treino = treinoRepository.findByIdComDetalhes(treinoId)
+                .orElseThrow(() -> new TreinoNotFoundException(treinoId));
+
+        usuarioTreinoRepository.findAllByUsuarioIdAndAtivoTrue(usuarioId).forEach(vinculoAtivo -> {
+            vinculoAtivo.setAtivo(false);
+            usuarioTreinoRepository.save(vinculoAtivo);
+        });
+
+        UsuarioTreino usuarioTreino = usuarioTreinoRepository.findByUsuarioIdAndTreinoId(usuarioId, treinoId)
+                .orElseGet(UsuarioTreino::new);
+
+        usuarioTreino.setUsuario(usuario);
+        usuarioTreino.setTreino(treino);
+        usuarioTreino.setAtivo(true);
+        usuarioTreino.setDataInicio(LocalDate.now());
+        usuarioTreinoRepository.save(usuarioTreino);
+
+        return montarTreinoAtualResponse(treino);
+    }
+
+    private TreinoAtualResponse montarTreinoAtualResponse(Treino treino) {
         List<ExercicioTreinoResponse> exercicios = treino.getExercicios().stream()
                 .map(exercicio -> new ExercicioTreinoResponse(
                         exercicio.getId(),
                         exercicio.getNome(),
                         exercicio.getQuantidadeSeries(),
                         exercicio.getRepeticoes(),
-                        exercicio.getGrupoMuscular().getNome(),
-                        exercicio.getMusculo().getNome()
+                        exercicio.getGrupoMuscular() == null ? "-" : exercicio.getGrupoMuscular().getNome(),
+                        exercicio.getMusculo() == null ? "-" : exercicio.getMusculo().getNome()
                 ))
                 .collect(Collectors.toList());
 
