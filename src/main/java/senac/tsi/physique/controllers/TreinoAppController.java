@@ -40,6 +40,7 @@ public class TreinoAppController {
     private final UsuarioTreinoRepository usuarioTreinoRepository;
     private final ResultadoTreinoRepository resultadoTreinoRepository;
     private final SerieExecutadaRepository serieExecutadaRepository;
+    private final TreinoSerieRepository treinoSerieRepository;
     private final UsuarioDesafioRepository usuarioDesafioRepository;
     private final DesafioRepository desafioRepository;
 
@@ -49,6 +50,7 @@ public class TreinoAppController {
                                UsuarioTreinoRepository usuarioTreinoRepository,
                                ResultadoTreinoRepository resultadoTreinoRepository,
                                SerieExecutadaRepository serieExecutadaRepository,
+                               TreinoSerieRepository treinoSerieRepository,
                                UsuarioDesafioRepository usuarioDesafioRepository,
                                DesafioRepository desafioRepository) {
         this.usuarioRepository = usuarioRepository;
@@ -57,6 +59,7 @@ public class TreinoAppController {
         this.usuarioTreinoRepository = usuarioTreinoRepository;
         this.resultadoTreinoRepository = resultadoTreinoRepository;
         this.serieExecutadaRepository = serieExecutadaRepository;
+        this.treinoSerieRepository = treinoSerieRepository;
         this.usuarioDesafioRepository = usuarioDesafioRepository;
         this.desafioRepository = desafioRepository;
     }
