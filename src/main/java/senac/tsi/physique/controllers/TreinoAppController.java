@@ -22,6 +22,7 @@ import senac.tsi.physique.idempotency.RequireIdempotency;
 import senac.tsi.physique.exceptions.TreinoNotFoundException;
 import senac.tsi.physique.exceptions.UsuarioNotFoundException;
 import senac.tsi.physique.repositories.*;
+import senac.tsi.physique.services.GamificacaoService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ public class TreinoAppController {
     private final TreinoSerieRepository treinoSerieRepository;
     private final UsuarioDesafioRepository usuarioDesafioRepository;
     private final DesafioRepository desafioRepository;
+    private final GamificacaoService gamificacaoService;
 
     public TreinoAppController(UsuarioRepository usuarioRepository,
                                TreinoRepository treinoRepository,
@@ -52,7 +54,8 @@ public class TreinoAppController {
                                SerieExecutadaRepository serieExecutadaRepository,
                                TreinoSerieRepository treinoSerieRepository,
                                UsuarioDesafioRepository usuarioDesafioRepository,
-                               DesafioRepository desafioRepository) {
+                               DesafioRepository desafioRepository,
+                               GamificacaoService gamificacaoService) {
         this.usuarioRepository = usuarioRepository;
         this.treinoRepository = treinoRepository;
         this.exercicioRepository = exercicioRepository;
@@ -62,6 +65,7 @@ public class TreinoAppController {
         this.treinoSerieRepository = treinoSerieRepository;
         this.usuarioDesafioRepository = usuarioDesafioRepository;
         this.desafioRepository = desafioRepository;
+        this.gamificacaoService = gamificacaoService;
     }
 
     @Operation(summary = "Buscar treino atual do usuário")
@@ -251,6 +255,8 @@ public class TreinoAppController {
             serieExecutada.setPeso(serieRequest.getPeso());
             serieExecutadaRepository.save(serieExecutada);
         }
+
+        gamificacaoService.processarTreinoFinalizado(usuario.getId());
 
         return ResponseEntity.ok(new FinalizarTreinoResponse(resultado.getId(), "Treino finalizado com sucesso"));
     }

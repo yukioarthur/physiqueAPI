@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "desafio_id"}))
 public class UsuarioDesafio {
@@ -27,7 +29,20 @@ public class UsuarioDesafio {
     private Integer progresso = 0;
 
     @NotNull
+    @Min(1)
+    private Integer progressoMeta = 1;
+
+    @NotNull
     private Boolean concluido = false;
+
+    @NotNull
+    @Min(0)
+    private Integer xpGanho = 0;
+
+    @NotNull
+    private String status = "PENDENTE";
+
+    private LocalDateTime concluidoEm;
 
     public UsuarioDesafio() {}
 
@@ -39,6 +54,14 @@ public class UsuarioDesafio {
     public void setDesafio(Desafio desafio) { this.desafio = desafio; }
     public Integer getProgresso() { return progresso; }
     public void setProgresso(Integer progresso) { this.progresso = progresso; }
+    public Integer getProgressoMeta() { return progressoMeta; }
+    public void setProgressoMeta(Integer progressoMeta) { this.progressoMeta = progressoMeta; }
     public Boolean getConcluido() { return concluido; }
     public void setConcluido(Boolean concluido) { this.concluido = concluido; }
+    public Integer getXpGanho() { return xpGanho; }
+    public void setXpGanho(Integer xpGanho) { this.xpGanho = xpGanho; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getConcluidoEm() { return concluidoEm; }
+    public void setConcluidoEm(LocalDateTime concluidoEm) { this.concluidoEm = concluidoEm; }
 }

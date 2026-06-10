@@ -17,6 +17,7 @@ import senac.tsi.physique.repositories.ResultadoTreinoRepository;
 import senac.tsi.physique.repositories.UsuarioDesafioRepository;
 import senac.tsi.physique.repositories.UsuarioRepository;
 import senac.tsi.physique.repositories.UsuarioTreinoRepository;
+import senac.tsi.physique.services.GamificacaoService;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -35,15 +36,18 @@ public class DashboardController {
     private final UsuarioTreinoRepository usuarioTreinoRepository;
     private final ResultadoTreinoRepository resultadoTreinoRepository;
     private final UsuarioDesafioRepository usuarioDesafioRepository;
+    private final GamificacaoService gamificacaoService;
 
     public DashboardController(UsuarioRepository usuarioRepository,
                                UsuarioTreinoRepository usuarioTreinoRepository,
                                ResultadoTreinoRepository resultadoTreinoRepository,
-                               UsuarioDesafioRepository usuarioDesafioRepository) {
+                               UsuarioDesafioRepository usuarioDesafioRepository,
+                               GamificacaoService gamificacaoService) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioTreinoRepository = usuarioTreinoRepository;
         this.resultadoTreinoRepository = resultadoTreinoRepository;
         this.usuarioDesafioRepository = usuarioDesafioRepository;
+        this.gamificacaoService = gamificacaoService;
     }
 
     @Operation(summary = "Buscar dashboard do usuário")
@@ -73,7 +77,8 @@ public class DashboardController {
                 treinoAtual,
                 montarUltimosTreinos(usuarioId),
                 montarDesafios(usuarioId),
-                new PerformanceResponse(85, 60, 40)
+                new PerformanceResponse(85, 78, 92),
+                gamificacaoService.getResumo(usuarioId)
         );
     }
 

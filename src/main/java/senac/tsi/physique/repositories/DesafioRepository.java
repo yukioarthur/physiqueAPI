@@ -5,8 +5,10 @@ import org.springframework.stereotype.Repository;
 import senac.tsi.physique.entities.Desafio;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DesafioRepository extends JpaRepository<Desafio, Long> {
     List<Desafio> findByAtivoTrue();
+    Optional<Desafio> findByRegra(String regra);
 }

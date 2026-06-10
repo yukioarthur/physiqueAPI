@@ -14,4 +14,5 @@ public interface ResultadoTreinoRepository extends JpaRepository<ResultadoTreino
     Page<ResultadoTreino> findByUsuarioId(Long usuarioId, Pageable pageable);
     List<ResultadoTreino> findByUsuarioIdAndDataBetweenAndStatusOrderByDataAsc(Long usuarioId, LocalDate inicio, LocalDate fim, String status);
     List<ResultadoTreino> findTop5ByUsuarioIdAndStatusOrderByDataDesc(Long usuarioId, String status);
+    long countByUsuarioIdAndDataBetweenAndStatus(Long usuarioId, LocalDate inicio, LocalDate fim, String status);
 }
