@@ -37,6 +37,19 @@ public class GamificacaoService {
         this.atividadeAerobicaRepository = atividadeAerobicaRepository;
     }
 
+
+    @Transactional
+    public void inicializarUsuario(Long usuarioId) {
+        var usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new UsuarioNotFoundException(usuarioId));
+
+        getOuCriarXp(usuarioId);
+        desafioRepository.findByAtivoTrue().forEach(desafio ->
+                usuarioDesafioRepository.findByUsuarioIdAndDesafioId(usuarioId, desafio.getId())
+                        .orElseGet(() -> criarUsuarioDesafio(usuario, desafio))
+        );
+    }
+
     @Transactional(readOnly = true)
     public GamificacaoResumoResponse getResumo(Long usuarioId) {
         var xp = usuarioXpRepository.findByUsuarioId(usuarioId).orElse(null);

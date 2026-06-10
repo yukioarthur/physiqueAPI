@@ -63,6 +63,31 @@ public class ApiKeyService {
         );
     }
 
+
+    @Transactional
+    public ApiKeyCreateResponse createAlunoKeyForUsuario(Usuario usuario, String name) {
+        String plainApiKey = generatePlainApiKey();
+        ApiKey apiKey = new ApiKey();
+        apiKey.setName(name == null || name.isBlank() ? "Chave Android aluno" : name);
+        apiKey.setKeyPrefix(extractPrefix(plainApiKey));
+        apiKey.setKeyHash(sha256(plainApiKey));
+        apiKey.setAccessPlan(ApiAccessPlan.ALUNO);
+        apiKey.setStatus(ApiKeyStatus.ACTIVE);
+        apiKey.setUsuario(usuario);
+
+        ApiKey saved = apiKeyRepository.save(apiKey);
+        return new ApiKeyCreateResponse(
+                saved.getId(),
+                saved.getName(),
+                plainApiKey,
+                saved.getKeyPrefix(),
+                saved.getAccessPlan(),
+                saved.getStatus(),
+                saved.getCreatedAt(),
+                saved.getExpiresAt()
+        );
+    }
+
     @Transactional(readOnly = true)
     public List<ApiKeyListResponse> listByUsuario(Long usuarioId) {
         usuarioRepository.findById(usuarioId)

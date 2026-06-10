@@ -1,25 +1,25 @@
 package senac.tsi.physique.dto;
 
-public class LoginResponse {
+public class CadastroResponse {
     private Long usuarioId;
     private String nome;
     private String email;
     private String apiKey;
     private String accessPlan;
+    private Long treinoId;
+    private String treinoNome;
     private String message;
 
-    public LoginResponse() {}
+    public CadastroResponse() {}
 
-    public LoginResponse(Long usuarioId, String nome, String email, String message) {
-        this(usuarioId, nome, email, null, null, message);
-    }
-
-    public LoginResponse(Long usuarioId, String nome, String email, String apiKey, String accessPlan, String message) {
+    public CadastroResponse(Long usuarioId, String nome, String email, String apiKey, String accessPlan, Long treinoId, String treinoNome, String message) {
         this.usuarioId = usuarioId;
         this.nome = nome;
         this.email = email;
         this.apiKey = apiKey;
         this.accessPlan = accessPlan;
+        this.treinoId = treinoId;
+        this.treinoNome = treinoNome;
         this.message = message;
     }
 
@@ -33,6 +33,10 @@ public class LoginResponse {
     public void setApiKey(String apiKey) { this.apiKey = apiKey; }
     public String getAccessPlan() { return accessPlan; }
     public void setAccessPlan(String accessPlan) { this.accessPlan = accessPlan; }
+    public Long getTreinoId() { return treinoId; }
+    public void setTreinoId(Long treinoId) { this.treinoId = treinoId; }
+    public String getTreinoNome() { return treinoNome; }
+    public void setTreinoNome(String treinoNome) { this.treinoNome = treinoNome; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 }
