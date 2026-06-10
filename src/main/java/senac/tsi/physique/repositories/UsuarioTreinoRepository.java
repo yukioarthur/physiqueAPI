@@ -28,4 +28,7 @@ public interface UsuarioTreinoRepository extends JpaRepository<UsuarioTreino, Lo
     Optional<UsuarioTreino> findByUsuarioIdAndTreinoId(Long usuarioId, Long treinoId);
 
     List<UsuarioTreino> findAllByUsuarioIdAndAtivoTrue(Long usuarioId);
+
+    @EntityGraph(attributePaths = {"treino"})
+    List<UsuarioTreino> findAllByUsuarioIdOrderByDataInicioAscIdAsc(Long usuarioId);
 }

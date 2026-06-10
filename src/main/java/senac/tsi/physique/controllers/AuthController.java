@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 @Validated
 @RestController
@@ -117,9 +118,7 @@ public class AuthController {
         if (request.getPlanoTreinoId() != null) {
             plano = planoTreinoRepository.findByIdAndAtivoTrue(request.getPlanoTreinoId())
                     .orElseThrow(() -> new IllegalArgumentException("Plano de treino não encontrado: " + request.getPlanoTreinoId()));
-            itensPlano = plano.getItens().stream()
-                    .sorted(Comparator.comparing(PlanoTreinoItem::getOrdem))
-                    .toList();
+            itensPlano = itensValidosDoPlano(plano);
 
             if (itensPlano.isEmpty()) {
                 return ResponseEntity.badRequest()
@@ -147,16 +146,12 @@ public class AuthController {
             usuarioPlano.setAtivo(true);
             usuarioPlanoTreinoRepository.save(usuarioPlano);
 
-            boolean primeiro = true;
-            for (PlanoTreinoItem item : itensPlano) {
-                UsuarioTreino vinculo = new UsuarioTreino();
-                vinculo.setUsuario(usuario);
-                vinculo.setTreino(item.getTreino());
-                vinculo.setAtivo(primeiro);
-                vinculo.setDataInicio(LocalDate.now());
-                usuarioTreinoRepository.save(vinculo);
-                primeiro = false;
-            }
+            UsuarioTreino vinculo = new UsuarioTreino();
+            vinculo.setUsuario(usuario);
+            vinculo.setTreino(primeiroTreino);
+            vinculo.setAtivo(true);
+            vinculo.setDataInicio(LocalDate.now());
+            usuarioTreinoRepository.save(vinculo);
         } else {
             UsuarioTreino vinculo = new UsuarioTreino();
             vinculo.setUsuario(usuario);
@@ -208,8 +203,7 @@ public class AuthController {
     }
 
     private PlanoTreinoCadastroResponse toPlanoCadastroResponse(PlanoTreino plano) {
-        List<String> treinos = plano.getItens().stream()
-                .sorted(Comparator.comparing(PlanoTreinoItem::getOrdem))
+        List<String> treinos = itensValidosDoPlano(plano).stream()
                 .map(item -> item.getNomeExibicao() == null || item.getNomeExibicao().isBlank()
                         ? nomeTreinoParaAluno(item.getTreino())
                         : item.getNomeExibicao())
@@ -227,6 +221,18 @@ public class AuthController {
                 splitLista(plano.getMetodologias()),
                 treinos
         );
+    }
+
+    private List<PlanoTreinoItem> itensValidosDoPlano(PlanoTreino plano) {
+        return plano.getItens().stream()
+                .filter(item -> item.getTreino() != null && item.getTreino().getId() != null)
+                .sorted(Comparator.comparing(PlanoTreinoItem::getOrdem))
+                .collect(LinkedHashMap<Long, PlanoTreinoItem>::new,
+                        (mapa, item) -> mapa.putIfAbsent(item.getTreino().getId(), item),
+                        LinkedHashMap::putAll)
+                .values()
+                .stream()
+                .toList();
     }
 
     private List<String> splitLista(String texto) {

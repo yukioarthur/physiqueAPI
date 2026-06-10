@@ -61,8 +61,10 @@ public class GamificacaoService {
         int xpSemana = xp == null ? 0 : nvl(xp.getXpSemana());
         int meta = xp == null ? 1000 : Math.max(1, nvl(xp.getMetaXpSemana()));
         int percentual = Math.min(100, Math.round((xpSemana * 100f) / meta));
-        String tituloNivel = nivel >= 4 ? "Atleta master" : nivel >= 3 ? "Ritmo forte" : nivel >= 2 ? "Em evolução" : "Começando bem";
-        String texto = xpSemana + " de " + meta + " XP da semana. " + concluidos + " de " + totalDesafios + " desafios concluídos.";
+        String tituloNivel = nivel >= 4 ? "Atleta master" : nivel >= 3 ? "Ritmo forte" : nivel >= 2 ? "Em evolução" : "Primeiros passos";
+        String texto = xpSemana == 0
+                ? "Sua jornada começa agora. Complete o primeiro treino para liberar XP e desafios."
+                : xpSemana + " de " + meta + " XP da semana. " + concluidos + " de " + totalDesafios + " desafios concluídos.";
 
         return new GamificacaoResumoResponse(xpTotal, nivel, xpSemana, meta, percentual, concluidos, totalDesafios, tituloNivel, texto);
     }

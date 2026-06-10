@@ -39,6 +39,9 @@ public class TreinoAppController {
     private final TreinoRepository treinoRepository;
     private final ExercicioRepository exercicioRepository;
     private final UsuarioTreinoRepository usuarioTreinoRepository;
+    private final UsuarioPlanoTreinoRepository usuarioPlanoTreinoRepository;
+    private final PlanoTreinoItemRepository planoTreinoItemRepository;
+    private final PlanoTreinoRepository planoTreinoRepository;
     private final ResultadoTreinoRepository resultadoTreinoRepository;
     private final SerieExecutadaRepository serieExecutadaRepository;
     private final TreinoSerieRepository treinoSerieRepository;
@@ -50,6 +53,9 @@ public class TreinoAppController {
                                TreinoRepository treinoRepository,
                                ExercicioRepository exercicioRepository,
                                UsuarioTreinoRepository usuarioTreinoRepository,
+                               UsuarioPlanoTreinoRepository usuarioPlanoTreinoRepository,
+                               PlanoTreinoItemRepository planoTreinoItemRepository,
+                               PlanoTreinoRepository planoTreinoRepository,
                                ResultadoTreinoRepository resultadoTreinoRepository,
                                SerieExecutadaRepository serieExecutadaRepository,
                                TreinoSerieRepository treinoSerieRepository,
@@ -60,6 +66,9 @@ public class TreinoAppController {
         this.treinoRepository = treinoRepository;
         this.exercicioRepository = exercicioRepository;
         this.usuarioTreinoRepository = usuarioTreinoRepository;
+        this.usuarioPlanoTreinoRepository = usuarioPlanoTreinoRepository;
+        this.planoTreinoItemRepository = planoTreinoItemRepository;
+        this.planoTreinoRepository = planoTreinoRepository;
         this.resultadoTreinoRepository = resultadoTreinoRepository;
         this.serieExecutadaRepository = serieExecutadaRepository;
         this.treinoSerieRepository = treinoSerieRepository;
@@ -110,6 +119,55 @@ public class TreinoAppController {
         usuarioTreinoRepository.save(usuarioTreino);
 
         return montarTreinoAtualResponse(treino);
+    }
+
+    @Operation(summary = "Ativar plano de treino do usuário", description = "Substitui o plano ativo do aluno. Os treinos antigos deixam de aparecer no app e o primeiro treino do novo plano vira a sessão ativa.")
+    @RequireApiKey(minPlan = ApiAccessPlan.ALUNO)
+    @PostMapping("/usuarios/{usuarioId}/planos/{planoTreinoId}/ativar")
+    @Transactional
+    public TreinoAtualResponse ativarPlanoTreino(
+            @PathVariable @Positive(message = "O ID do usuário deve ser maior que zero") Long usuarioId,
+            @PathVariable @Positive(message = "O ID do plano deve ser maior que zero") Long planoTreinoId
+    ) {
+        var usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new UsuarioNotFoundException(usuarioId));
+        var plano = planoTreinoRepository.findByIdAndAtivoTrue(planoTreinoId)
+                .orElseThrow(() -> new IllegalArgumentException("Plano de treino não encontrado: " + planoTreinoId));
+
+        var itensPlano = planoTreinoItemRepository.findAllByPlanoTreinoIdOrderByOrdemAsc(plano.getId()).stream()
+                .filter(item -> item.getTreino() != null && item.getTreino().getId() != null)
+                .toList();
+
+        if (itensPlano.isEmpty()) {
+            throw new IllegalArgumentException("O plano escolhido ainda não possui treinos vinculados");
+        }
+
+        usuarioPlanoTreinoRepository.findAllByUsuarioIdAndAtivoTrue(usuarioId).forEach(vinculoPlano -> {
+            vinculoPlano.setAtivo(false);
+            usuarioPlanoTreinoRepository.save(vinculoPlano);
+        });
+
+        usuarioTreinoRepository.findAllByUsuarioIdAndAtivoTrue(usuarioId).forEach(vinculoTreino -> {
+            vinculoTreino.setAtivo(false);
+            usuarioTreinoRepository.save(vinculoTreino);
+        });
+
+        var usuarioPlano = new senac.tsi.physique.entities.UsuarioPlanoTreino();
+        usuarioPlano.setUsuario(usuario);
+        usuarioPlano.setPlanoTreino(plano);
+        usuarioPlano.setAtivo(true);
+        usuarioPlanoTreinoRepository.save(usuarioPlano);
+
+        var primeiroTreino = itensPlano.get(0).getTreino();
+        var usuarioTreino = usuarioTreinoRepository.findByUsuarioIdAndTreinoId(usuarioId, primeiroTreino.getId())
+                .orElseGet(UsuarioTreino::new);
+        usuarioTreino.setUsuario(usuario);
+        usuarioTreino.setTreino(primeiroTreino);
+        usuarioTreino.setAtivo(true);
+        usuarioTreino.setDataInicio(LocalDate.now());
+        usuarioTreinoRepository.save(usuarioTreino);
+
+        return montarTreinoAtualResponse(primeiroTreino);
     }
 
     private TreinoAtualResponse montarTreinoAtualResponse(Treino treino) {
@@ -197,7 +255,60 @@ public class TreinoAppController {
     }
 
 
-    @Operation(summary = "Listar treinos disponíveis para iniciar no app")
+    @Operation(summary = "Listar treinos disponíveis do usuário", description = "Retorna apenas os treinos vinculados ao plano do aluno, evitando mostrar todos os treinos do banco no Android.")
+    @RequireApiKey(minPlan = ApiAccessPlan.ALUNO)
+    @GetMapping("/usuarios/{usuarioId}/treinos-disponiveis")
+    @Transactional(readOnly = true)
+    public List<TreinoAtualResumoResponse> getTreinosDisponiveisDoUsuario(
+            @PathVariable @Positive(message = "O ID do usuário deve ser maior que zero") Long usuarioId
+    ) {
+        usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new UsuarioNotFoundException(usuarioId));
+
+        var treinosPorId = treinosDoPlanoAtivo(usuarioId);
+
+        if (treinosPorId.isEmpty()) {
+            usuarioTreinoRepository.findAllByUsuarioIdOrderByDataInicioAscIdAsc(usuarioId).forEach(usuarioTreino -> {
+                var treino = usuarioTreino.getTreino();
+                if (treino != null && treino.getId() != null) {
+                    treinosPorId.putIfAbsent(treino.getId(), treino);
+                }
+            });
+        }
+
+        return treinosPorId.values().stream()
+                .map(treino -> new TreinoAtualResumoResponse(
+                        treino.getId(),
+                        treino.getNome(),
+                        treino.getCriadorNome(),
+                        treino.getObjetivo(),
+                        treino.getMetodologia(),
+                        nivelTreino(treino.getNome(), treino.getMetodologia())
+                ))
+                .toList();
+    }
+
+    private LinkedHashMap<Long, Treino> treinosDoPlanoAtivo(Long usuarioId) {
+        var treinosPorId = new LinkedHashMap<Long, Treino>();
+
+        usuarioPlanoTreinoRepository.findAllByUsuarioIdAndAtivoTrue(usuarioId).forEach(usuarioPlano -> {
+            var plano = usuarioPlano.getPlanoTreino();
+            if (plano == null || plano.getId() == null) {
+                return;
+            }
+
+            planoTreinoItemRepository.findAllByPlanoTreinoIdOrderByOrdemAsc(plano.getId()).forEach(item -> {
+                var treino = item.getTreino();
+                if (treino != null && treino.getId() != null) {
+                    treinosPorId.putIfAbsent(treino.getId(), treino);
+                }
+            });
+        });
+
+        return treinosPorId;
+    }
+
+    @Operation(summary = "Listar todos os treinos do catálogo", description = "Endpoint administrativo/legado. O app Android deve preferir /usuarios/{usuarioId}/treinos-disponiveis.")
     @RequireApiKey(minPlan = ApiAccessPlan.ALUNO)
     @GetMapping("/treinos-disponiveis")
     @Transactional(readOnly = true)
