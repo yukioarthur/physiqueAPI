@@ -132,8 +132,21 @@ public class AuthController {
                 .map(treino -> new TreinoAtualResumoResponse(
                         treino.getId(),
                         treino.getNome(),
-                        treino.getCriadorNome()
+                        treino.getCriadorNome(),
+                        treino.getObjetivo(),
+                        treino.getMetodologia(),
+                        nivelTreino(treino.getNome(), treino.getMetodologia())
                 ))
                 .toList();
     }
+
+
+    private String nivelTreino(String nome, String metodologia) {
+        String texto = ((nome == null ? "" : nome) + " " + (metodologia == null ? "" : metodologia)).toLowerCase();
+        if (texto.contains("avanç") || texto.contains("avanc")) return "avançado";
+        if (texto.contains("intermedi")) return "intermediário";
+        if (texto.contains("iniciante") || texto.contains("base") || texto.contains("adapta")) return "iniciante";
+        return "geral";
+    }
+
 }
