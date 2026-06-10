@@ -39,7 +39,9 @@ public class CadastroRequest {
     @DecimalMin(value = "1.0", message = "O peso corporal deve ser maior que zero")
     private Double pesoCorporal;
 
-    @NotNull(message = "Escolha um treino inicial")
+    @Positive(message = "O plano de treino deve ser válido")
+    private Long planoTreinoId;
+
     @Positive(message = "O treino inicial deve ser válido")
     private Long treinoId;
 
@@ -57,6 +59,8 @@ public class CadastroRequest {
     public void setObjetivo(String objetivo) { this.objetivo = objetivo; }
     public Double getPesoCorporal() { return pesoCorporal; }
     public void setPesoCorporal(Double pesoCorporal) { this.pesoCorporal = pesoCorporal; }
+    public Long getPlanoTreinoId() { return planoTreinoId; }
+    public void setPlanoTreinoId(Long planoTreinoId) { this.planoTreinoId = planoTreinoId; }
     public Long getTreinoId() { return treinoId; }
     public void setTreinoId(Long treinoId) { this.treinoId = treinoId; }
 }

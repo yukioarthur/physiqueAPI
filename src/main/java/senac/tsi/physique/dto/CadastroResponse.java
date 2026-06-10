@@ -8,11 +8,13 @@ public class CadastroResponse {
     private String accessPlan;
     private Long treinoId;
     private String treinoNome;
+    private Long planoTreinoId;
+    private String planoTreinoNome;
     private String message;
 
     public CadastroResponse() {}
 
-    public CadastroResponse(Long usuarioId, String nome, String email, String apiKey, String accessPlan, Long treinoId, String treinoNome, String message) {
+    public CadastroResponse(Long usuarioId, String nome, String email, String apiKey, String accessPlan, Long treinoId, String treinoNome, Long planoTreinoId, String planoTreinoNome, String message) {
         this.usuarioId = usuarioId;
         this.nome = nome;
         this.email = email;
@@ -20,6 +22,8 @@ public class CadastroResponse {
         this.accessPlan = accessPlan;
         this.treinoId = treinoId;
         this.treinoNome = treinoNome;
+        this.planoTreinoId = planoTreinoId;
+        this.planoTreinoNome = planoTreinoNome;
         this.message = message;
     }
 
@@ -37,6 +41,10 @@ public class CadastroResponse {
     public void setTreinoId(Long treinoId) { this.treinoId = treinoId; }
     public String getTreinoNome() { return treinoNome; }
     public void setTreinoNome(String treinoNome) { this.treinoNome = treinoNome; }
+    public Long getPlanoTreinoId() { return planoTreinoId; }
+    public void setPlanoTreinoId(Long planoTreinoId) { this.planoTreinoId = planoTreinoId; }
+    public String getPlanoTreinoNome() { return planoTreinoNome; }
+    public void setPlanoTreinoNome(String planoTreinoNome) { this.planoTreinoNome = planoTreinoNome; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 }
