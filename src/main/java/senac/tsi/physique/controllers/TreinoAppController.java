@@ -24,6 +24,8 @@ import senac.tsi.physique.exceptions.UsuarioNotFoundException;
 import senac.tsi.physique.repositories.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -104,16 +106,79 @@ public class TreinoAppController {
     }
 
     private TreinoAtualResponse montarTreinoAtualResponse(Treino treino) {
-        List<ExercicioTreinoResponse> exercicios = treino.getExercicios().stream()
-                .map(exercicio -> new ExercicioTreinoResponse(
+        var seriesPrescritas = treinoSerieRepository.findByTreinoBaseIdOrderByOrdemExercicioAscNumeroSerieAsc(treino.getId());
+
+        List<ExercicioTreinoResponse> exercicios;
+        if (!seriesPrescritas.isEmpty()) {
+            var exerciciosMap = new LinkedHashMap<Long, ExercicioTreinoResponse>();
+            var seriesPorExercicio = new LinkedHashMap<Long, List<SeriePrescritaResponse>>();
+
+            for (var serie : seriesPrescritas) {
+                var exercicio = serie.getExercicio();
+                if (exercicio == null || exercicio.getId() == null) {
+                    continue;
+                }
+
+                Long exercicioId = exercicio.getId();
+                seriesPorExercicio.computeIfAbsent(exercicioId, id -> new ArrayList<>())
+                        .add(new SeriePrescritaResponse(
+                                serie.getId(),
+                                serie.getNumeroSerie(),
+                                serie.getRepeticoesMin(),
+                                serie.getRepeticoesMax(),
+                                serie.getCargaSugerida(),
+                                serie.getRir(),
+                                serie.getDescansoSegundos(),
+                                serie.getTempoExecucao(),
+                                serie.getObservacao()
+                        ));
+
+                exerciciosMap.computeIfAbsent(exercicioId, id -> new ExercicioTreinoResponse(
                         exercicio.getId(),
                         exercicio.getNome(),
-                        exercicio.getQuantidadeSeries(),
-                        exercicio.getRepeticoes(),
+                        0,
+                        serie.getRepeticoesMax(),
+                        serie.getRepeticoesMin(),
+                        serie.getRepeticoesMax(),
+                        serie.getDescansoSegundos(),
                         exercicio.getGrupoMuscular() == null ? "-" : exercicio.getGrupoMuscular().getNome(),
-                        exercicio.getMusculo() == null ? "-" : exercicio.getMusculo().getNome()
-                ))
-                .collect(Collectors.toList());
+                        exercicio.getMusculo() == null ? "-" : exercicio.getMusculo().getNome(),
+                        exercicio.getDescricao(),
+                        serie.getObservacao(),
+                        new ArrayList<>()
+                ));
+            }
+
+            exercicios = exerciciosMap.values().stream()
+                    .peek(exercicio -> {
+                        var series = seriesPorExercicio.getOrDefault(exercicio.getId(), List.of());
+                        exercicio.setSeries(series);
+                        exercicio.setQuantidadeSeries(series.size());
+                        exercicio.setRepeticoesMin(series.stream()
+                                .map(SeriePrescritaResponse::getRepeticoesMin)
+                                .filter(v -> v != null)
+                                .min(Integer::compareTo)
+                                .orElse(exercicio.getRepeticoesMin()));
+                        exercicio.setRepeticoesMax(series.stream()
+                                .map(SeriePrescritaResponse::getRepeticoesMax)
+                                .filter(v -> v != null)
+                                .max(Integer::compareTo)
+                                .orElse(exercicio.getRepeticoesMax()));
+                        exercicio.setRepeticoes(exercicio.getRepeticoesMax());
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            exercicios = treino.getExercicios().stream()
+                    .map(exercicio -> new ExercicioTreinoResponse(
+                            exercicio.getId(),
+                            exercicio.getNome(),
+                            exercicio.getQuantidadeSeries(),
+                            exercicio.getRepeticoes(),
+                            exercicio.getGrupoMuscular() == null ? "-" : exercicio.getGrupoMuscular().getNome(),
+                            exercicio.getMusculo() == null ? "-" : exercicio.getMusculo().getNome()
+                    ))
+                    .collect(Collectors.toList());
+        }
 
         return new TreinoAtualResponse(
                 treino.getId(),
@@ -122,6 +187,21 @@ public class TreinoAppController {
                 treino.getMetodologia(),
                 exercicios
         );
+    }
+
+
+    @Operation(summary = "Listar treinos disponíveis para iniciar no app")
+    @RequireApiKey(minPlan = ApiAccessPlan.ALUNO)
+    @GetMapping("/treinos-disponiveis")
+    @Transactional(readOnly = true)
+    public List<TreinoAtualResumoResponse> getTreinosDisponiveis() {
+        return treinoRepository.findAll().stream()
+                .map(treino -> new TreinoAtualResumoResponse(
+                        treino.getId(),
+                        treino.getNome(),
+                        treino.getCriadorNome()
+                ))
+                .toList();
     }
 
     @Operation(summary = "Finalizar treino", description = "Recebe as séries preenchidas no Android e salva a sessão finalizada no banco")
